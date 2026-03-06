@@ -21,7 +21,8 @@ enum class SettingType : uint8_t {
     INTEGER,
     TOGGLE,
     ENUM_CHOICE,
-    ACTION       // Button — triggers callback on Enter
+    ACTION,      // Button — triggers callback on Enter
+    TEXT_INPUT    // Editable text field
 };
 
 struct SettingItem {
@@ -37,6 +38,10 @@ struct SettingItem {
     std::vector<const char*> enumLabels;
     // For ACTION: callback on Enter
     std::function<void()> action;
+    // For TEXT_INPUT: string getter/setter
+    std::function<String()> textGetter;
+    std::function<void(const String&)> textSetter;
+    int maxTextLen = 16;
 };
 
 class SettingsScreen : public Screen {
@@ -87,4 +92,7 @@ private:
     int _scrollOffset = 0;
     bool _editing = false;
     int _editValue = 0;
+    // For TEXT_INPUT editing
+    bool _textEditing = false;
+    String _editText;
 };

@@ -18,6 +18,14 @@ void HomeScreen::update() {
     }
 }
 
+bool HomeScreen::handleKey(const KeyEvent& event) {
+    if (event.enter || event.character == '\n' || event.character == '\r') {
+        if (_announceCb) _announceCb();
+        return true;
+    }
+    return false;
+}
+
 void HomeScreen::draw(LGFX_TDeck& gfx) {
     int x = 4;
     int y = Theme::CONTENT_Y + 4;

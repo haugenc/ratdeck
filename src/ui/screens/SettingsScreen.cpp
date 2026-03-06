@@ -34,7 +34,8 @@ bool SettingsScreen::isEditable(int idx) const {
     if (idx < 0 || idx >= (int)_items.size()) return false;
     auto t = _items[idx].type;
     return t == SettingType::INTEGER || t == SettingType::TOGGLE
-        || t == SettingType::ENUM_CHOICE || t == SettingType::ACTION;
+        || t == SettingType::ENUM_CHOICE || t == SettingType::ACTION
+        || t == SettingType::TEXT_INPUT;
 }
 
 void SettingsScreen::skipToNextEditable(int dir) {
@@ -85,6 +86,15 @@ void SettingsScreen::buildItems() {
         [](int) { return String(RATDECK_VERSION_STRING); }});
     _items.push_back({"Identity", SettingType::READONLY, nullptr, nullptr,
         [this](int) { return _identityHash.substring(0, 16); }});
+    {
+        SettingItem nameItem;
+        nameItem.label = "Display Name";
+        nameItem.type = SettingType::TEXT_INPUT;
+        nameItem.textGetter = [&s]() { return s.displayName; };
+        nameItem.textSetter = [&s](const String& v) { s.displayName = v; };
+        nameItem.maxTextLen = 16;
+        _items.push_back(nameItem);
+    }
 
     // --- Display ---
     _items.push_back({"-- Display --", SettingType::HEADER, nullptr, nullptr, nullptr});
@@ -168,8 +178,20 @@ void SettingsScreen::buildItems() {
         announceItem.type = SettingType::ACTION;
         announceItem.formatter = [](int) { return String("[Press Enter]"); };
         announceItem.action = [this]() {
-            if (_rns) {
-                _rns->announce();
+            if (_rns && _cfg) {
+                // Encode display name as msgpack app_data
+                const String& name = _cfg->settings().displayName;
+                RNS::Bytes appData;
+                if (!name.isEmpty()) {
+                    size_t len = name.length();
+                    if (len > 31) len = 31;
+                    uint8_t buf[2 + 31];
+                    buf[0] = 0x91;
+                    buf[1] = 0xA0 | (uint8_t)len;
+                    memcpy(buf + 2, name.c_str(), len);
+                    appData = RNS::Bytes(buf, 2 + len);
+                }
+                _rns->announce(appData);
                 if (_ui) {
                     _ui->statusBar().flashAnnounce();
                     _ui->statusBar().showToast("Announce sent!");
@@ -268,6 +290,7 @@ void SettingsScreen::onEnter() {
     _selectedIdx = 0;
     _scrollOffset = 0;
     _editing = false;
+    _textEditing = false;
     // Skip to first editable item
     if (!isEditable(_selectedIdx)) {
         skipToNextEditable(1);
@@ -317,6 +340,27 @@ void SettingsScreen::draw(LGFX_TDeck& gfx) {
                 gfx.setTextColor(Theme::MUTED, bgCol);
                 gfx.setCursor(valX, y + 3);
                 gfx.print(hint.c_str());
+            }
+        } else if (item.type == SettingType::TEXT_INPUT) {
+            // Text input field
+            gfx.setTextColor(Theme::SECONDARY, bgCol);
+            gfx.setCursor(4, y + 3);
+            gfx.print(item.label);
+
+            if (_textEditing && selected) {
+                // Editing: show text with cursor
+                gfx.setTextColor(Theme::WARNING_CLR, bgCol);
+                gfx.setCursor(valX, y + 3);
+                gfx.print(_editText.c_str());
+                int curX = valX + _editText.length() * 6;
+                if ((millis() / 500) % 2 == 0) {
+                    gfx.fillRect(curX, y + 3, 6, 8, Theme::WARNING_CLR);
+                }
+            } else {
+                String val = item.textGetter ? item.textGetter() : "";
+                gfx.setTextColor(val.isEmpty() ? Theme::MUTED : Theme::PRIMARY, bgCol);
+                gfx.setCursor(valX, y + 3);
+                gfx.print(val.isEmpty() ? "(not set)" : val.c_str());
             }
         } else {
             // Label
@@ -378,6 +422,32 @@ void SettingsScreen::draw(LGFX_TDeck& gfx) {
 bool SettingsScreen::handleKey(const KeyEvent& event) {
     if (_items.empty()) return false;
 
+    if (_textEditing) {
+        // Text edit mode
+        auto& item = _items[_selectedIdx];
+        if (event.enter || event.character == '\n' || event.character == '\r') {
+            if (item.textSetter) item.textSetter(_editText);
+            _textEditing = false;
+            applyAndSave();
+            markDirty();
+            return true;
+        }
+        if (event.del || event.character == 8) {
+            if (_editText.length() > 0) {
+                _editText.remove(_editText.length() - 1);
+                markDirty();
+            }
+            return true;
+        }
+        if (event.character >= 0x20 && event.character <= 0x7E
+            && (int)_editText.length() < item.maxTextLen) {
+            _editText += (char)event.character;
+            markDirty();
+            return true;
+        }
+        return true;  // Consume all keys in text edit mode
+    }
+
     if (_editing) {
         // Edit mode: left/right change value, enter confirms, backspace/del cancels
         auto& item = _items[_selectedIdx];
@@ -431,6 +501,11 @@ bool SettingsScreen::handleKey(const KeyEvent& event) {
         if (item.type == SettingType::ACTION) {
             // Execute action callback
             if (item.action) item.action();
+            markDirty();
+        } else if (item.type == SettingType::TEXT_INPUT) {
+            // Enter text edit mode
+            _textEditing = true;
+            _editText = item.textGetter ? item.textGetter() : "";
             markDirty();
         } else if (item.type == SettingType::TOGGLE) {
             // Toggle immediately

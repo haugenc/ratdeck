@@ -26,6 +26,7 @@
 #include "ui/screens/SettingsScreen.h"
 #include "ui/screens/HelpOverlay.h"
 #include "ui/screens/MapScreen.h"
+#include "ui/screens/NameInputScreen.h"
 #include "storage/FlashStore.h"
 #include "storage/SDStore.h"
 #include "storage/MessageStore.h"
@@ -90,6 +91,7 @@ MessageView messageView;
 SettingsScreen settingsScreen;
 HelpOverlay helpOverlay;
 MapScreen mapScreen;
+NameInputScreen nameInputScreen;
 
 // Tab-screen mapping (5 tabs)
 Screen* tabScreens[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
@@ -109,6 +111,29 @@ unsigned long lastHeartbeat = 0;
 constexpr unsigned long HEARTBEAT_INTERVAL_MS = 5000;
 unsigned long loopCycleStart = 0;
 unsigned long maxLoopTime = 0;
+
+// =============================================================================
+// Announce with display name (MessagePack-encoded app_data)
+// =============================================================================
+
+static RNS::Bytes encodeAnnounceName(const String& name) {
+    if (name.isEmpty()) return {};
+    size_t len = name.length();
+    if (len > 31) len = 31;
+    uint8_t buf[2 + 31];
+    buf[0] = 0x91;                     // msgpack fixarray(1)
+    buf[1] = 0xA0 | (uint8_t)len;     // msgpack fixstr(len)
+    memcpy(buf + 2, name.c_str(), len);
+    return RNS::Bytes(buf, 2 + len);
+}
+
+static void announceWithName() {
+    RNS::Bytes appData = encodeAnnounceName(userConfig.settings().displayName);
+    rns.announce(appData);
+    ui.statusBar().flashAnnounce();
+    ui.statusBar().showToast("Announce sent!");
+    Serial.println("[ANNOUNCE] Sent with display name");
+}
 
 // =============================================================================
 // Hotkey callbacks
@@ -131,9 +156,7 @@ void onHotkeySettings() {
     ui.setScreen(&settingsScreen);
 }
 void onHotkeyAnnounce() {
-    rns.announce();
-    ui.statusBar().flashAnnounce();
-    ui.statusBar().showToast("Announce sent!");
+    announceWithName();
 }
 void onHotkeyDiag() {
     Serial.println("=== DIAGNOSTIC DUMP ===");
@@ -530,13 +553,15 @@ void setup() {
     delay(400);
 
     bootComplete = true;
-    ui.setBootMode(false);
     ui.statusBar().setTransportMode("Ratdeck");
 
     // Wire up screen dependencies
     homeScreen.setReticulumManager(&rns);
     homeScreen.setRadio(&radio);
     homeScreen.setUserConfig(&userConfig);
+    homeScreen.setAnnounceCallback([]() {
+        announceWithName();
+    });
 
     nodesScreen.setAnnounceManager(announceManager);
     nodesScreen.setNodeSelectedCallback([](const std::string& peerHex) {
@@ -586,13 +611,41 @@ void setup() {
         if (tabScreens[tab]) ui.setScreen(tabScreens[tab]);
     });
 
-    ui.setScreen(&homeScreen);
-    ui.tabBar().setActiveTab(TabBar::TAB_HOME);
+    // Name input screen (first boot only — when no display name is set)
+    nameInputScreen.setDoneCallback([](const String& name) {
+        userConfig.settings().displayName = name;
+        userConfig.save(sdStore, flash);
+        Serial.printf("[BOOT] Display name set: '%s'\n", name.c_str());
 
-    // Initial announce
-    rns.announce();
-    lastAutoAnnounce = millis();
-    Serial.println("[BOOT] Initial announce sent");
+        // Transition to home screen
+        ui.setBootMode(false);
+        ui.setScreen(&homeScreen);
+        ui.tabBar().setActiveTab(TabBar::TAB_HOME);
+
+        // Initial announce with name
+        RNS::Bytes appData = encodeAnnounceName(userConfig.settings().displayName);
+        rns.announce(appData);
+        lastAutoAnnounce = millis();
+        ui.statusBar().flashAnnounce();
+        Serial.println("[BOOT] Initial announce sent");
+    });
+
+    if (userConfig.settings().displayName.isEmpty()) {
+        // Show name input screen (boot mode keeps status/tab bars hidden)
+        ui.setScreen(&nameInputScreen);
+        Serial.println("[BOOT] Showing name input screen");
+    } else {
+        // Name already set — go straight to home
+        ui.setBootMode(false);
+        ui.setScreen(&homeScreen);
+        ui.tabBar().setActiveTab(TabBar::TAB_HOME);
+
+        // Initial announce with name
+        RNS::Bytes appData = encodeAnnounceName(userConfig.settings().displayName);
+        rns.announce(appData);
+        lastAutoAnnounce = millis();
+        Serial.println("[BOOT] Initial announce sent");
+    }
 
     // Clear boot loop counter — we survived!
     {
@@ -635,14 +688,16 @@ void loop() {
             // Screen gets the key next
             bool consumed = ui.handleKey(evt);
 
-            // Tab cycling: ,=left /=right (only if screen didn't consume)
+            // Tab cycling: ,=left /=right OR trackball left/right (only if screen didn't consume)
             if (!consumed && !evt.ctrl) {
-                if (evt.character == ',') {
+                bool tabLeft  = (evt.character == ',') || evt.left;
+                bool tabRight = (evt.character == '/') || evt.right;
+                if (tabLeft) {
                     ui.tabBar().cycleTab(-1);
                     int tab = ui.tabBar().getActiveTab();
                     if (tabScreens[tab]) ui.setScreen(tabScreens[tab]);
                 }
-                if (evt.character == '/') {
+                if (tabRight) {
                     ui.tabBar().cycleTab(1);
                     int tab = ui.tabBar().getActiveTab();
                     if (tabScreens[tab]) ui.setScreen(tabScreens[tab]);
@@ -657,7 +712,8 @@ void loop() {
     // 4. Auto-announce every 5 minutes
     if (bootComplete && millis() - lastAutoAnnounce >= ANNOUNCE_INTERVAL_MS) {
         lastAutoAnnounce = millis();
-        rns.announce();
+        RNS::Bytes appData = encodeAnnounceName(userConfig.settings().displayName);
+        rns.announce(appData);
         ui.statusBar().flashAnnounce();
         Serial.println("[AUTO] Periodic announce");
     }
