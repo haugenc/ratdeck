@@ -23,9 +23,9 @@ struct RadioPresetLv {
     uint8_t sf; uint32_t bw; uint8_t cr; int8_t txPower; long preamble;
 };
 static const RadioPresetLv LV_PRESETS[] = {
-    {"Balanced",   9,  250000, 5,  14, 18},
-    {"Long Range", 12, 125000, 8,  17, 18},
-    {"Fast",       7,  500000, 5,  10, 18},
+    {"Balanced",   9,  125000, 5,  17, 18},
+    {"Long Range", 12,  62500, 8,  22, 18},
+    {"Fast",       7,  250000, 5,  14, 18},
 };
 static constexpr int LV_NUM_PRESETS = 3;
 
