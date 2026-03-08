@@ -51,7 +51,7 @@ If the device doesn't respond to flash commands, enter download mode:
 
 ### Web Flash
 
-Visit [ratspeak.org/download](https://ratspeak.org/download) to flash directly from your browser using WebSerial — no build tools required.
+Visit [ratspeak.org/download](https://ratspeak.org/download.html) to flash directly from your browser using WebSerial — no build tools required.
 
 ### Creating a Merged Binary
 
@@ -130,7 +130,7 @@ From `platformio.ini`:
 GitHub Actions workflow (`.github/workflows/build.yml`):
 
 - **Build**: Triggers on push to `main` and PRs. Runs `pio run`, uploads `firmware.bin` as artifact.
-- **Release**: Triggers on `v*` tags. Builds firmware, creates a GitHub Release with the binary ZIP attached. Powers the web flasher at [ratspeak.org/download](https://ratspeak.org/download).
+- **Release**: Triggers on `v*` tags. Builds firmware, creates a GitHub Release with the binary ZIP attached. Powers the web flasher at [ratspeak.org/download](https://ratspeak.org/download.html).
 
 ### Release Process
 

@@ -25,7 +25,7 @@ python3 -m platformio run --target upload
 
 ### Web Flash (No Build Required)
 
-Visit [ratspeak.org/download](https://ratspeak.org/download) to flash directly from your browser using WebSerial.
+Visit [ratspeak.org/download](https://ratspeak.org/download.html) to flash directly from your browser using WebSerial.
 
 ### USB Port
 
