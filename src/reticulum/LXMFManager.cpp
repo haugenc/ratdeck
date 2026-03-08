@@ -18,12 +18,22 @@ bool LXMFManager::begin(ReticulumManager* rns, MessageStore* store) {
 void LXMFManager::loop() {
     if (_outQueue.empty()) return;
     LXMFMessage& msg = _outQueue.front();
+
+    // Throttle retries — wait 2 seconds between attempts
+    unsigned long now = millis();
+    if (msg.retries > 0 && (now - _lastRetryMs) < 2000) return;
+    _lastRetryMs = now;
+
     if (sendDirect(msg)) {
         Serial.printf("[LXMF] Queue drain: status=%s dest=%s\n",
                       msg.statusStr(), msg.destHash.toHex().substr(0, 8).c_str());
-        // Re-save with updated status (overwrite the QUEUED version)
-        msg.messageId = RNS::Bytes(); // Clear so saveMessage reuses timestamp key
-        if (_store) { _store->saveMessage(msg); }
+
+        // Re-save with updated status (SENT/FAILED) using same timestamp key
+        RNS::Bytes savedId = msg.messageId;
+        msg.messageId = RNS::Bytes();
+        if (_store) _store->saveMessage(msg);
+        msg.messageId = savedId;
+
         // Fire status callback so UI can refresh
         if (_statusCb) {
             std::string peerHex = msg.destHash.toHex();
@@ -60,13 +70,13 @@ bool LXMFManager::sendDirect(LXMFMessage& msg) {
     RNS::Identity recipientId = RNS::Identity::recall(msg.destHash);
     if (!recipientId) {
         msg.retries++;
-        if (msg.retries >= 5) {
+        if (msg.retries >= 30) {
             Serial.printf("[LXMF] recall FAILED for %s after %d retries — marking FAILED\n",
                           msg.destHash.toHex().substr(0, 8).c_str(), msg.retries);
             msg.status = LXMFStatus::FAILED;
             return true;
         }
-        Serial.printf("[LXMF] recall FAILED for %s (retry %d/5) — identity not known yet\n",
+        Serial.printf("[LXMF] recall pending for %s (retry %d/30) — identity not known yet\n",
                       msg.destHash.toHex().substr(0, 8).c_str(), msg.retries);
         return false;  // keep in queue, retry next loop
     }

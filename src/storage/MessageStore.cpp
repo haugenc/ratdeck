@@ -299,8 +299,12 @@ std::vector<LXMFMessage> MessageStore::loadConversation(const std::string& peerH
         }
     }
 
+    // Sort chronologically; non-epoch timestamps (uptime-based) sort before epoch
     std::sort(messages.begin(), messages.end(),
               [](const LXMFMessage& a, const LXMFMessage& b) {
+                  bool aEpoch = a.timestamp > 1700000000;
+                  bool bEpoch = b.timestamp > 1700000000;
+                  if (aEpoch != bEpoch) return !aEpoch; // non-epoch sorts before epoch
                   return a.timestamp < b.timestamp;
               });
 

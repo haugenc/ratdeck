@@ -1,13 +1,13 @@
 #pragma once
 
 // =============================================================================
-// Ratdeck — Compile-Time Configuration
+// RatDeck — Compile-Time Configuration
 // =============================================================================
 
 #define RATDECK_VERSION_MAJOR  1
-#define RATDECK_VERSION_MINOR  4
-#define RATDECK_VERSION_PATCH  2
-#define RATDECK_VERSION_STRING "1.4.2"
+#define RATDECK_VERSION_MINOR  5
+#define RATDECK_VERSION_PATCH  1
+#define RATDECK_VERSION_STRING "1.5.1"
 
 // --- Feature Flags ---
 #define HAS_DISPLAY     true

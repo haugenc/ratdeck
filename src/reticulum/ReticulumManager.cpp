@@ -253,6 +253,15 @@ String ReticulumManager::destinationHashHex() const {
     return String(_destination.hash().toHex().c_str());
 }
 
+String ReticulumManager::destinationHashStr() const {
+    if (!_destination) return "unknown";
+    std::string hex = _destination.hash().toHex();
+    if (hex.length() >= 12) {
+        return String((hex.substr(0, 4) + ":" + hex.substr(4, 4) + ":" + hex.substr(8, 4)).c_str());
+    }
+    return String(hex.c_str());
+}
+
 size_t ReticulumManager::pathCount() const { return _reticulum.get_path_table().size(); }
 size_t ReticulumManager::linkCount() const { return _reticulum.get_link_count(); }
 

@@ -71,7 +71,7 @@ std::vector<std::string> MessageView::wordWrap(const std::string& text, int maxC
 }
 
 std::string MessageView::formatTime(double timestamp) {
-    if (timestamp < 1000000) return "";
+    if (timestamp < 1700000000) return "";
     time_t t = (time_t)timestamp;
     struct tm* tm = localtime(&t);
     if (!tm) return "";

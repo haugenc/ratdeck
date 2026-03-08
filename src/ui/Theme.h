@@ -3,7 +3,7 @@
 #include <cstdint>
 
 // =============================================================================
-// Ratdeck — Cyberpunk Theme Constants
+// RatDeck — Cyberpunk Theme Constants
 // =============================================================================
 
 namespace Theme {

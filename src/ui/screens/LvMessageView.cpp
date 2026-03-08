@@ -237,7 +237,7 @@ void LvMessageView::rebuildMessages() {
         }
 
         // Timestamp below bubble
-        if (msg.timestamp > 1000000) {
+        if (msg.timestamp > 1700000000) {
             time_t t = (time_t)msg.timestamp;
             struct tm* tm = localtime(&t);
             if (tm) {

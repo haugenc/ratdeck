@@ -46,7 +46,7 @@ void HomeScreen::draw(LGFX_TDeck& gfx) {
     };
 
     if (_rns) {
-        drawLine(Theme::PRIMARY, "ID: %s", _rns->identityHash().c_str());
+        drawLine(Theme::PRIMARY, "LXMF: %s", _rns->destinationHashStr().c_str());
         drawLine(Theme::PRIMARY, "Transport: %s",
             _rns->isTransportActive() ? "ACTIVE" : "OFFLINE");
         drawLine(Theme::PRIMARY, "Paths: %d  Links: %d",

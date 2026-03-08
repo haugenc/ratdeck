@@ -1,6 +1,6 @@
-# Ratdeck
+# RatDeck
 
-**v1.4.2** | [Ratspeak.org](https://ratspeak.org)
+**v1.5.1** | [Ratspeak.org](https://ratspeak.org)
 
 Standalone [Reticulum](https://reticulum.network/) mesh node + [LXMF](https://github.com/markqvist/LXMF) encrypted messenger for the [LilyGo T-Deck Plus](https://www.lilygo.cc/products/t-deck-plus).
 
@@ -42,7 +42,7 @@ Built on [microReticulum](https://github.com/attermann/microReticulum) with a re
 ## Quick Start
 
 ```bash
-git clone https://github.com/defidude/Ratdeck.git
+git clone https://github.com/ratspeak/ratdeck.git
 cd Ratdeck
 python3 -m platformio run               # build
 python3 -m platformio run --target upload # flash

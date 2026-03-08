@@ -161,7 +161,7 @@ void LvMessagesScreen::rebuildList() {
         lv_obj_align(nameLbl, LV_ALIGN_TOP_LEFT, 14, 2);
 
         // Timestamp (line 1, right)
-        if (ci.lastTs > 1000000) {
+        if (ci.lastTs > 1700000000) {
             time_t t = (time_t)ci.lastTs;
             struct tm* tm = localtime(&t);
             if (tm) {
@@ -257,7 +257,10 @@ bool LvMessagesScreen::handleKey(const KeyEvent& event) {
                 extern MessageStore messageStore;
                 messageStore.deleteConversation(peerHex);
                 messageStore.refreshConversations();
-                if (_ui) _ui->lvStatusBar().showToast("Chat deleted", 1200);
+                if (_ui) {
+                    _ui->lvStatusBar().showToast("Chat deleted", 1200);
+                    _ui->lvTabBar().setUnreadCount(LvTabBar::TAB_MSGS, _lxmf->unreadCount());
+                }
                 _selectedIdx = 0;
                 _lastConvCount = -1;
                 rebuildList();

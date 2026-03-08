@@ -1,5 +1,5 @@
 // =============================================================================
-// Ratdeck v1.0 — Main Entry Point
+// RatDeck v1.5 — Main Entry Point
 // LilyGo T-Deck Plus: LovyanGFX Direct UI + microReticulum + LXMF Messaging
 // =============================================================================
 
@@ -224,7 +224,7 @@ void onHotkeyAnnounce() {
 }
 void onHotkeyDiag() {
     Serial.println("=== DIAGNOSTIC DUMP ===");
-    Serial.printf("Device: Ratdeck T-Deck Plus\n");
+    Serial.printf("Device: RatDeck T-Deck Plus\n");
     Serial.printf("Identity: %s\n", rns.identityHash().c_str());
     Serial.printf("Transport: %s\n", rns.isTransportActive() ? "ACTIVE" : "OFFLINE");
     Serial.printf("Paths: %d  Links: %d\n", (int)rns.pathCount(), (int)rns.linkCount());
@@ -303,7 +303,7 @@ void setup() {
     delay(100);
     Serial.println();
     Serial.println("=================================");
-    Serial.printf("  Ratdeck v%s\n", RATDECK_VERSION_STRING);
+    Serial.printf("  RatDeck v%s\n", RATDECK_VERSION_STRING);
     Serial.println("  LilyGo T-Deck Plus");
     Serial.println("=================================");
 
@@ -530,6 +530,16 @@ void setup() {
     // (LVGL boot renders via lv_timer_handler in setProgress)
     userConfig.load(sdStore, flash);
 
+    // Seed default Ratspeak TCP hub if no connections configured
+    if (userConfig.settings().tcpConnections.empty()) {
+        TCPEndpoint ep;
+        ep.host = "rns.ratspeak.org";
+        ep.port = 4242;
+        ep.autoConnect = true;
+        userConfig.settings().tcpConnections.push_back(ep);
+        Serial.println("[CONFIG] Default TCP hub: rns.ratspeak.org:4242");
+    }
+
     // Sync display name between active identity slot and config.
     // The identity slot is the source of truth for the name.
     {
@@ -660,8 +670,8 @@ void setup() {
     delay(400);
 
     bootComplete = true;
-    ui.statusBar().setTransportMode("Ratdeck");
-    ui.lvStatusBar().setTransportMode("Ratdeck");
+    ui.statusBar().setTransportMode("RatDeck");
+    ui.lvStatusBar().setTransportMode("RatDeck");
 
     // Keep UI alive during blocking radio TX (endPacket wait loop)
     // Re-entrancy guard prevents nested lv_timer_handler() calls
@@ -730,7 +740,7 @@ void setup() {
     lvSettingsScreen.setRNS(&rns);
     lvSettingsScreen.setIdentityManager(&identityMgr);
     lvSettingsScreen.setUIManager(&ui);
-    lvSettingsScreen.setIdentityHash(rns.identityHash());
+    lvSettingsScreen.setIdentityHash(rns.destinationHashStr());
     lvSettingsScreen.setDestinationHash(rns.destinationHashHex());
     lvSettingsScreen.setSaveCallback([]() -> bool {
         bool ok = userConfig.save(sdStore, flash);
@@ -813,7 +823,7 @@ void setup() {
         }
     }
 
-    Serial.println("[BOOT] Ratdeck ready");
+    Serial.println("[BOOT] RatDeck ready");
     Serial.printf("[BOOT] Summary: radio=%s flash=%s sd=%s\n",
                   radioOnline ? "ONLINE" : "OFFLINE",
                   flash.isReady() ? "OK" : "FAIL",
@@ -909,6 +919,10 @@ void loop() {
             ui.statusBar().setWiFiActive(true);
             ui.lvStatusBar().setWiFiActive(true);
             Serial.printf("[WIFI] STA connected: %s\n", WiFi.localIP().toString().c_str());
+
+            // NTP time sync
+            configTzTime("UTC5", "pool.ntp.org", "time.nist.gov");
+            Serial.println("[NTP] Time sync started (UTC-5)");
 
             // Create TCP clients (safe to call multiple times)
             if (tcpClients.empty()) {
