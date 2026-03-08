@@ -52,7 +52,7 @@ First build pulls the ESP32-S3 toolchain and all dependencies automatically.
 
 ### Web Flash
 
-No build tools? Visit **[ratspeak.org/flash](https://ratspeak.org/flash.html)** to flash from your browser.
+No build tools? Visit **[ratspeak.org/download](https://ratspeak.org/download)** to flash from your browser.
 
 ## First Boot
 
