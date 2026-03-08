@@ -24,7 +24,7 @@ Not an RNode. Not a gateway. A fully self-contained Reticulum instance with a ke
 - **Mesh networking** — Reticulum endpoint or transport node, automatic path discovery
 - **Node discovery** — See who's online, save contacts, manage friends
 - **WiFi bridging** — TCP client to remote Reticulum nodes, or AP mode to bridge your desktop to LoRa
-- **BLE transport** — Unavailable
+- **BLE transport** — Not yet available
 - **Identity management** — Easily swap and manage different identities
 - **Dual storage** — LittleFS flash + SD card with atomic writes and automatic backup
 - **OTA-ready** — Check for firmware updates directly from the device
@@ -101,9 +101,9 @@ Three presets in Settings → Radio:
 
 | Preset | SF | BW | CR | TX | Use Case |
 |--------|----|----|----|----|----------|
-| **Balanced** | 9 | 250 kHz | 4/5 | 14 dBm | General use |
-| Long Range | 12 | 125 kHz | 4/8 | 17 dBm | Maximum range |
-| Fast | 7 | 500 kHz | 4/5 | 10 dBm | Short range, fast |
+| **Balanced** | 9 | 125 kHz | 4/5 | 17 dBm | General use |
+| Long Range | 12 | 62.5 kHz | 4/8 | 22 dBm | Maximum range |
+| Fast | 7 | 250 kHz | 4/5 | 14 dBm | Short range, fast |
 
 All parameters individually configurable. Changes apply immediately.
 
@@ -115,7 +115,7 @@ All parameters individually configurable. Changes apply immediately.
 | **AP** | Creates `ratdeck-XXXX` hotspot, TCP server on port 4242 |
 | **OFF** | LoRa only, saves power |
 
-**Connect to the mesh over WiFi:** Settings → Network → enter WiFi creds → add TCP endpoint (e.g., `rns.beleth.net:4242`).
+**Connect to the mesh over WiFi:** Settings → Network → enter WiFi creds → add TCP endpoint (e.g., `rns.ratspeak.org:4242`).
 
 **Bridge your desktop to LoRa:** Set AP mode → connect laptop to `ratdeck-XXXX` (password: `ratspeak`) → add `TCPClientInterface` to `~/.reticulum/config` pointing at `192.168.4.1:4242`.
 
@@ -132,7 +132,7 @@ Default: **endpoint** (handles own traffic). Enable **Transport Node** in Settin
 | LVGL UI | Working — 5 tabs, chat bubbles, settings, contacts |
 | WiFi STA + TCP | Working — auto-reconnect, live server switching |
 | WiFi AP | Working — TCP server, HDLC framing, desktop bridge |
-| BLE Sideband | Working — NimBLE transport |
+| BLE Sideband | Not yet available |
 | Node discovery | Working — announces, friend management |
 | SD + Flash storage | Working — dual-backend, atomic writes |
 | Identity management | Working — multi-slot, triple-redundant |
