@@ -4,7 +4,7 @@
 
 **Encrypted mesh messenger for the LilyGo T-Deck Plus**
 
-[![Ratspeak Demo](https://img.youtube.com/vi/F6I6fkMPxgI/maxresdefault.jpg)](https://www.youtube.com/watch?v=F6I6fkMPxgI)
+[![Ratspeak Demo](https://img.youtube.com/vi/F6I6fkMPxgI/hqdefault.jpg)](https://www.youtube.com/watch?v=F6I6fkMPxgI)
 
 A standalone Reticulum node with a keyboard, trackball, and screen — no computer required.
 
