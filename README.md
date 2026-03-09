@@ -8,8 +8,6 @@
 
 <sub>[▶ YouTube: Reticulum Standalone - T-Deck & Cardputer Adv](https://www.youtube.com/watch?v=F6I6fkMPxgI)</sub>
 
-A standalone Reticulum node with a keyboard, trackball, and screen — no computer required.
-
 </div>
 
 ---
