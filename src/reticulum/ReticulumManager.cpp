@@ -64,9 +64,9 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
     RNS::Utilities::OS::register_filesystem(fs);
     Serial.println("[RNS] Filesystem registered");
 
-    // Restore routing tables from SD if missing on flash
+    // Restore routing tables and known destinations from SD if missing on flash
     if (_sd && _sd->isReady()) {
-        static const char* files[] = {"/destination_table", "/packet_hashlist"};
+        static const char* files[] = {"/destination_table", "/packet_hashlist", "/known_destinations"};
         for (const char* name : files) {
             if (!LittleFS.exists(name)) {
                 char sdPath[64];
@@ -104,6 +104,10 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
     }
     _reticulum.start();
     Serial.printf("[RNS] Reticulum started (%s)\n", _transportEnabled ? "Transport Node" : "Endpoint");
+
+    // Load persisted known destinations so Identity::recall() works
+    // immediately after reboot for previously-seen nodes.
+    RNS::Identity::load_known_destinations();
 
     if (!loadOrCreateIdentity()) {
         Serial.println("[RNS] ERROR: Identity creation failed!");
@@ -217,9 +221,10 @@ void ReticulumManager::loop() {
 
 void ReticulumManager::persistData() {
     RNS::Transport::persist_data();
-    // Backup routing tables to SD
+    RNS::Identity::persist_data();
+    // Backup routing tables and known destinations to SD
     if (_sd && _sd->isReady()) {
-        static const char* files[] = {"/destination_table", "/packet_hashlist"};
+        static const char* files[] = {"/destination_table", "/packet_hashlist", "/known_destinations"};
         for (const char* name : files) {
             File f = LittleFS.open(name, "r");
             if (f && f.size() > 0) {
