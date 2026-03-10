@@ -232,28 +232,38 @@ void ReticulumManager::loop() {
 }
 
 void ReticulumManager::persistData() {
-    RNS::Transport::persist_data();
-    RNS::Identity::persist_data();
-    // Backup routing tables and known destinations to SD
-    if (_sd && _sd->isReady()) {
-        static const char* files[] = {"/destination_table", "/packet_hashlist", "/known_destinations"};
-        for (const char* name : files) {
-            File f = LittleFS.open(name, "r");
-            if (f && f.size() > 0) {
-                size_t sz = f.size();
-                uint8_t* buf = (uint8_t*)malloc(sz);
-                if (buf) {
-                    f.readBytes((char*)buf, sz);
-                    char sdPath[64];
-                    snprintf(sdPath, sizeof(sdPath), "/ratputer/transport%s", name);
-                    _sd->ensureDir("/ratputer/transport");
-                    _sd->writeSimple(sdPath, buf, sz);
-                    free(buf);
+    // Rotate through persist steps to spread file I/O across cycles
+    switch (_persistCycle) {
+        case 0:
+            RNS::Transport::persist_data();
+            break;
+        case 1:
+            RNS::Identity::persist_data();
+            break;
+        case 2:
+            // Backup routing tables and known destinations to SD
+            if (_sd && _sd->isReady()) {
+                static const char* files[] = {"/destination_table", "/packet_hashlist", "/known_destinations"};
+                for (const char* name : files) {
+                    File f = LittleFS.open(name, "r");
+                    if (f && f.size() > 0) {
+                        size_t sz = f.size();
+                        uint8_t* buf = (uint8_t*)malloc(sz);
+                        if (buf) {
+                            f.readBytes((char*)buf, sz);
+                            char sdPath[64];
+                            snprintf(sdPath, sizeof(sdPath), "/ratputer/transport%s", name);
+                            _sd->ensureDir("/ratputer/transport");
+                            _sd->writeSimple(sdPath, buf, sz);
+                            free(buf);
+                        }
+                    }
+                    if (f) f.close();
                 }
             }
-            if (f) f.close();
-        }
+            break;
     }
+    _persistCycle = (_persistCycle + 1) % 3;
 }
 
 String ReticulumManager::identityHash() const {

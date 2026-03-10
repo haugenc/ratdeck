@@ -120,6 +120,11 @@ unsigned long lastHeartbeat = 0;
 constexpr unsigned long HEARTBEAT_INTERVAL_MS = 5000;
 unsigned long loopCycleStart = 0;
 unsigned long maxLoopTime = 0;
+unsigned long lastLvglTime = 0;
+constexpr unsigned long LVGL_INTERVAL_MS = 33;          // ~30 FPS
+constexpr unsigned long TCP_GLOBAL_BUDGET_MS = 12;      // Max cumulative TCP time per loop
+bool wifiDeferredAnnounce = false;
+unsigned long wifiConnectedAt = 0;
 
 // =============================================================================
 // Announce with display name (MessagePack-encoded app_data)
@@ -888,16 +893,20 @@ void loop() {
         }
     }
 
-    // 3. LVGL timer handler — run FIRST after input for responsive UI
-    if (powerMgr.isScreenOn()) {
-        lv_timer_handler();
+    // 3. LVGL timer handler — throttled to ~30 FPS
+    {
+        unsigned long now = millis();
+        if (powerMgr.isScreenOn() && now - lastLvglTime >= LVGL_INTERVAL_MS) {
+            lastLvglTime = now;
+            lv_timer_handler();
+        }
     }
 
-    // 4. Reticulum loop (radio RX via LoRaInterface) — throttle to ~200Hz
+    // 4. Reticulum loop (radio RX via LoRaInterface) — throttle to ~100Hz
     {
         static unsigned long lastRNS = 0;
         unsigned long now = millis();
-        if (now - lastRNS >= 5) {
+        if (now - lastRNS >= 10) {
             lastRNS = now;
             rns.loop();
         }
@@ -932,20 +941,9 @@ void loop() {
 
             // Recreate TCP clients on every WiFi connect (old clients may have stale sockets)
             reloadTCPClients();
-            // Announce over TCP now that it's available — delay to let VPS register the connection
-            bool anyTcpConnected = false;
-            for (auto* tcp : tcpClients) {
-                if (tcp->isConnected()) { anyTcpConnected = true; break; }
-            }
-            if (anyTcpConnected) {
-                delay(1500);  // Let VPS Reticulum register the new interface
-                Serial.println("[TCP] Sending announce over new TCP connection...");
-                RNS::Bytes appData = encodeAnnounceName(userConfig.settings().displayName);
-                rns.announce(appData);
-                lastAutoAnnounce = millis();
-            } else {
-                Serial.println("[TCP] No TCP clients connected, skipping announce");
-            }
+            // Defer announce to let VPS register the connection (non-blocking)
+            wifiDeferredAnnounce = true;
+            wifiConnectedAt = millis();
         } else if (!connected && wifiSTAConnected) {
             wifiSTAConnected = false;
             ui.statusBar().setWiFiActive(false);
@@ -962,11 +960,32 @@ void loop() {
         }
     }
 
-    // 8. WiFi + TCP loops
+    // 7.5. Deferred WiFi announce (non-blocking replacement for delay(1500))
+    if (wifiDeferredAnnounce && millis() - wifiConnectedAt >= 1500) {
+        wifiDeferredAnnounce = false;
+        bool anyTcpConnected = false;
+        for (auto* tcp : tcpClients) {
+            if (tcp->isConnected()) { anyTcpConnected = true; break; }
+        }
+        if (anyTcpConnected) {
+            Serial.println("[TCP] Sending announce over new TCP connection...");
+            RNS::Bytes appData = encodeAnnounceName(userConfig.settings().displayName);
+            rns.announce(appData);
+            lastAutoAnnounce = millis();
+        } else {
+            Serial.println("[TCP] No TCP clients connected, skipping announce");
+        }
+    }
+
+    // 8. WiFi + TCP loops (with global budget)
     if (wifiImpl) wifiImpl->loop();
-    for (auto* tcp : tcpClients) {
-        tcp->loop();
-        yield();
+    {
+        unsigned long tcpBudgetStart = millis();
+        for (auto* tcp : tcpClients) {
+            if (millis() - tcpBudgetStart >= TCP_GLOBAL_BUDGET_MS) break;
+            tcp->loop();
+            yield();
+        }
     }
 
     // 9. BLE loops

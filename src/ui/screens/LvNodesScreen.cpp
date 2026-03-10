@@ -50,9 +50,15 @@ void LvNodesScreen::refreshUI() {
     if (now - _lastRebuild < REBUILD_INTERVAL_MS) return;
     int contacts = 0;
     for (const auto& n : _am->nodes()) { if (n.saved) contacts++; }
-    if (_am->nodeCount() != _lastNodeCount || contacts != _lastContactCount) {
+    int countDelta = abs(_am->nodeCount() - _lastNodeCount);
+    int contactDelta = abs(contacts - _lastContactCount);
+    if (countDelta > 0 || contactDelta > 0) {
         _lastRebuild = now;
-        rebuildList();
+        // Skip rebuild for tiny transient count changes (≤3 nodes, no contact changes)
+        // They'll be picked up on the next interval
+        if (countDelta > 3 || contactDelta > 0) {
+            rebuildList();
+        }
     }
 }
 

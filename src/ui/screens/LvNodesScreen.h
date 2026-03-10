@@ -44,7 +44,7 @@ private:
     std::vector<int> _rowToNodeIdx; // Maps row index -> node index in _am->nodes(), -1 for headers
 
     unsigned long _lastRebuild = 0;
-    static constexpr unsigned long REBUILD_INTERVAL_MS = 2000;
+    static constexpr unsigned long REBUILD_INTERVAL_MS = 5000;
 
     lv_obj_t* _list = nullptr;
     lv_obj_t* _lblEmpty = nullptr;
