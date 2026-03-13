@@ -126,7 +126,9 @@ bool LXMFManager::sendDirect(LXMFMessage& msg) {
 
     RNS::Destination outDest(recipientId, RNS::Type::Destination::OUT,
         RNS::Type::Destination::SINGLE, "lxmf", "delivery");
-    Serial.printf("[LXMF] outDest hash: %s\n", outDest.hash().toHex().substr(0, 12).c_str());
+    Serial.printf("[DIAG] LXMF: outDest=%s msgDest=%s match=%s\n",
+        outDest.hash().toHex().c_str(), msg.destHash.toHex().c_str(),
+        (outDest.hash() == msg.destHash) ? "YES" : "NO");
     std::vector<uint8_t> payload = msg.packFull(_rns->identity());
     if (payload.empty()) { Serial.println("[LXMF] packFull returned empty!"); msg.status = LXMFStatus::FAILED; return true; }
     RNS::Bytes payloadBytes(payload.data(), payload.size());

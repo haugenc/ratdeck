@@ -10,12 +10,12 @@
 // Without this, colors appear pixelated/glitchy
 #define LV_COLOR_16_SWAP 1
 
-// Memory: use stdlib malloc (PSRAM-aware on ESP32-S3)
+// Memory: route all LVGL allocations to PSRAM via heap_caps
 #define LV_MEM_CUSTOM 1
-#define LV_MEM_CUSTOM_INCLUDE <stdlib.h>
-#define LV_MEM_CUSTOM_ALLOC   malloc
-#define LV_MEM_CUSTOM_FREE    free
-#define LV_MEM_CUSTOM_REALLOC realloc
+#define LV_MEM_CUSTOM_INCLUDE <esp_heap_caps.h>
+#define LV_MEM_CUSTOM_ALLOC(size)       heap_caps_malloc(size, MALLOC_CAP_SPIRAM)
+#define LV_MEM_CUSTOM_FREE              heap_caps_free
+#define LV_MEM_CUSTOM_REALLOC(p, size)  heap_caps_realloc(p, size, MALLOC_CAP_SPIRAM)
 
 // Tick: custom (provided by main loop)
 #define LV_TICK_CUSTOM 1
