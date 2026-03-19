@@ -148,7 +148,7 @@ bool LXMFManager::sendDirect(LXMFMessage& msg) {
     RNS::PacketReceipt receipt = packet.send();
     if (receipt) {
         msg.status = LXMFStatus::SENT;
-        msg.messageId = RNS::Identity::full_hash(payloadBytes);
+        // messageId already computed by packFull() matching Python's LXMessage.pack()
         Serial.printf("[LXMF] SENT OK: %d bytes, msgId=%s\n", (int)payloadBytes.size(), msg.messageId.toHex().substr(0, 8).c_str());
     } else {
         Serial.println("[LXMF] send FAILED: no receipt");
@@ -159,7 +159,14 @@ bool LXMFManager::sendDirect(LXMFMessage& msg) {
 
 void LXMFManager::onPacketReceived(const RNS::Bytes& data, const RNS::Packet& packet) {
     if (!_instance) return;
-    _instance->processIncoming(data.data(), data.size(), packet.destination_hash());
+    // Non-link delivery: dest_hash is NOT in LXMF payload (it's in the RNS packet header).
+    // Reconstruct full format by prepending it, matching Python LXMRouter.delivery_packet().
+    const RNS::Bytes& destHash = packet.destination_hash();
+    std::vector<uint8_t> fullData;
+    fullData.reserve(destHash.size() + data.size());
+    fullData.insert(fullData.end(), destHash.data(), destHash.data() + destHash.size());
+    fullData.insert(fullData.end(), data.data(), data.data() + data.size());
+    _instance->processIncoming(fullData.data(), fullData.size(), destHash);
 }
 
 void LXMFManager::onLinkEstablished(RNS::Link& link) {

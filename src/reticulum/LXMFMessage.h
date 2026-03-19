@@ -27,7 +27,7 @@ struct LXMFMessage {
     RNS::Bytes messageId;
 
     static std::vector<uint8_t> packContent(double timestamp, const std::string& content, const std::string& title);
-    std::vector<uint8_t> packFull(const RNS::Identity& signingIdentity) const;
+    std::vector<uint8_t> packFull(const RNS::Identity& signingIdentity);
     static bool unpackFull(const uint8_t* data, size_t len, LXMFMessage& msg);
     const char* statusStr() const;
 };
