@@ -226,19 +226,32 @@ void LXMFManager::onOutLinkClosed(RNS::Link& link) {
 
 void LXMFManager::onLinkEstablished(RNS::Link& link) {
     if (!_instance) return;
+    Serial.printf("[LXMF-DIAG] onLinkEstablished fired! link_id=%s status=%d\n",
+        link.link_id().toHex().substr(0, 16).c_str(), (int)link.status());
     link.set_packet_callback([](const RNS::Bytes& data, const RNS::Packet& packet) {
         if (!_instance) return;
-        _instance->processIncoming(data.data(), data.size(), packet.destination_hash());
+        Serial.printf("[LXMF-DIAG] Link packet received! %d bytes pkt_dest=%s\n",
+            (int)data.size(), packet.destination_hash().toHex().substr(0, 16).c_str());
+        // Link delivery: data already contains [dest:16][src:16][sig:64][msgpack]
+        // Do NOT use packet.destination_hash() — that's the link_id, not the LXMF dest.
+        // Pass empty Bytes so processIncoming uses the destHash from unpackFull().
+        _instance->processIncoming(data.data(), data.size(), RNS::Bytes());
     });
 }
 
 void LXMFManager::processIncoming(const uint8_t* data, size_t len, const RNS::Bytes& destHash) {
+    Serial.printf("[LXMF-DIAG] processIncoming: %d bytes callerDestHash=%s\n",
+        (int)len, destHash.size() > 0 ? destHash.toHex().substr(0, 16).c_str() : "EMPTY(link)");
     LXMFMessage msg;
     if (!LXMFMessage::unpackFull(data, len, msg)) {
         Serial.printf("[LXMF] Failed to unpack incoming message (%d bytes)\n", (int)len);
         return;
     }
     if (_rns && msg.sourceHash == _rns->destination().hash()) return;
+
+    Serial.printf("[LXMF-DIAG] unpackFull OK: src=%s dest=%s content_len=%d\n",
+        msg.sourceHash.toHex().substr(0, 8).c_str(),
+        msg.destHash.toHex().substr(0, 8).c_str(), (int)msg.content.size());
 
     // Deduplication: skip messages we've already processed
     std::string msgIdHex = msg.messageId.toHex();
@@ -252,7 +265,11 @@ void LXMFManager::processIncoming(const uint8_t* data, size_t len, const RNS::By
         _seenMessageIds.erase(_seenMessageIds.begin());
     }
 
-    msg.destHash = destHash;
+    // Only overwrite destHash if caller provided a real one (non-link delivery).
+    // For link delivery, unpackFull already parsed the correct destHash from the payload.
+    if (destHash.size() > 0) {
+        msg.destHash = destHash;
+    }
     Serial.printf("[LXMF] Message from %s (%d bytes) content_len=%d\n",
                   msg.sourceHash.toHex().substr(0, 8).c_str(), (int)len, (int)msg.content.size());
     if (_store) { _store->saveMessage(msg); }

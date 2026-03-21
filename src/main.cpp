@@ -1055,6 +1055,15 @@ void loop() {
                           radioOnline ? "ON" : "OFF",
                           sdStore.isReady() ? "OK" : "FAIL",
                           flash.isReady() ? "OK" : "FAIL");
+            // Diagnostic: show registered transport interfaces and TCP connection status
+            {
+                auto& ifaces = RNS::Transport::get_interfaces();
+                int tcpUp = 0;
+                for (auto* tcp : tcpClients) { if (tcp && tcp->isConnected()) tcpUp++; }
+                Serial.printf("[HEART-DIAG] ifaces=%d tcp=%d/%d wifi=%s\n",
+                    (int)ifaces.size(), tcpUp, (int)tcpClients.size(),
+                    wifiSTAConnected ? "STA" : (wifiImpl ? "AP" : "OFF"));
+            }
             maxLoopTime = 0;
         }
     }

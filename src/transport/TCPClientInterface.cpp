@@ -138,6 +138,16 @@ void TCPClientInterface::send_outgoing(const RNS::Bytes& data) {
         uint8_t header_type = (flags >> 6) & 0x01;
         uint8_t packet_type = flags & 0x03;
 
+        // Diagnostic: identify packet types going through TCP
+        static const char* pt_names[] = {"DATA", "ANNOUNCE", "LINKREQ", "PROOF"};
+        Serial.printf("[TCP-DIAG] send: %d bytes ht=%d pt=%s(%d) to %s:%d\n",
+            (int)data.size(), header_type,
+            (packet_type < 4) ? pt_names[packet_type] : "?", packet_type,
+            _host.c_str(), _port);
+        if (packet_type == 0x03) {
+            Serial.printf("[TCP-DIAG] *** PROOF packet being sent via TCP! ***\n");
+        }
+
         if (packet_type != 0x01) {  // Not ANNOUNCE
             if (header_type == 0) {
                 // Header1 → wrap as Header2 (handles hops==1, hops==0, unknown path)
