@@ -367,6 +367,9 @@ size_t SX1262::write(uint8_t byte) { return write(&byte, 1); }
 
 size_t SX1262::write(const uint8_t* buffer, size_t size) {
     if ((_payloadLength + size) > MAX_PACKET_SIZE) {
+        Serial.printf("[SX1262] WARNING: write() truncating %d->%d bytes (payload=%d max=%d)\n",
+                      (int)size, (int)(MAX_PACKET_SIZE - _payloadLength),
+                      (int)_payloadLength, (int)MAX_PACKET_SIZE);
         size = MAX_PACKET_SIZE - _payloadLength;
     }
     writeBuffer(buffer, size);
