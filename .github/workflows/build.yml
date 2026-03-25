@@ -41,7 +41,6 @@ jobs:
           cp .pio/build/ratdeck_915/partitions.bin ratdeck-firmware/
           cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ratdeck-firmware/
           cp .pio/build/ratdeck_915/firmware.bin ratdeck-firmware/
-          cp ratdeck-merged.bin ratdeck-firmware/
           cat > ratdeck-firmware/manifest.json << 'MANIFEST'
           {
             "chipFamily": "ESP32-S3",
@@ -103,7 +102,6 @@ jobs:
           cp .pio/build/ratdeck_915/partitions.bin ratdeck-firmware/
           cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ratdeck-firmware/
           cp .pio/build/ratdeck_915/firmware.bin ratdeck-firmware/
-          cp ratdeck-merged.bin ratdeck-firmware/
           cat > ratdeck-firmware/manifest.json << 'MANIFEST'
           {
             "chipFamily": "ESP32-S3",
